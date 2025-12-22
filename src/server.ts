@@ -1,26 +1,15 @@
 import express, { Request, Response } from "express";
 import cors from "cors";
 import dotenv from "dotenv";
-dotenv.config({
-  path: ".env",
-});
-import { sheets } from "./google/sheets";
 
+dotenv.config(); // funciona local e ignora no Render
+
+import { sheets } from "./google/sheets";
 import authRoutes from "./routes/auth.routes";
 import recordRoutes from "./routes/records.routes";
 
-console.log("ENV DEBUG:", process.env.SPREADSHEET_ID);
-
 const app = express();
-async function testSheets() {
-  const res = await sheets.spreadsheets.get({
-    spreadsheetId: process.env.SPREADSHEET_ID!,
-  });
 
-  console.log("Sheets conectado:", res.data.properties?.title);
-}
-
-testSheets();
 app.use(cors());
 app.use(express.json());
 
@@ -31,6 +20,24 @@ app.get("/health", (_req: Request, res: Response) => {
   res.json({ status: "ok" });
 });
 
-app.listen(3333, () => {
-  console.log("🚀 Server running on http://localhost:3333");
+// 🔥 PORTA OBRIGATÓRIA PARA O RENDER
+const PORT = process.env.PORT || 3000;
+
+// 🚀 SÓ DEPOIS DE ESCUTAR A PORTA
+app.listen(PORT, async () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+
+  // Teste do Sheets NÃO BLOQUEANTE
+  try {
+    const res = await sheets.spreadsheets.get({
+      spreadsheetId: process.env.SPREADSHEET_ID!,
+    });
+
+    console.log(
+      "📄 Sheets conectado:",
+      res.data.properties?.title
+    );
+  } catch (error) {
+    console.error("❌ Erro ao conectar no Sheets:", error);
+  }
 });
