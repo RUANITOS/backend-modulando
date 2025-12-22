@@ -19,29 +19,57 @@ export async function createRecord(req: Request, res: Response) {
   if (!SPREADSHEET_ID) return;
 
   const email = (req as any).user.email;
-  const { modulo, presenca, energia, clareza, compromisso, emocao, insight } =
-    req.body;
+
+  const {
+    modulo,
+
+    // antigo
+    presenca,
+    energia,
+    clareza,
+    compromisso,
+
+    // novo 5D
+    fisico,
+    energetico,
+    emocional5d,
+    mental,
+    espiritual,
+
+    emocao,
+    insight,
+  } = req.body;
 
   await sheets.spreadsheets.values.append({
     spreadsheetId: SPREADSHEET_ID,
-    range: "Registros!A:J",
+    range: "Registros!A:O",
     valueInputOption: "RAW",
     requestBody: {
-      values: [[
-        uuid(),
-        email,
-        new Date().toISOString(),
-        modulo,
-        presenca,
-        energia,
-        clareza,
-        compromisso,
-        emocao,
-        insight,
-      ]],
+      values: [
+        [
+          uuid(),
+          email,
+          new Date().toISOString(),
+          modulo,
+
+          // antigo
+          presenca ?? "",
+          energia ?? "",
+          clareza ?? "",
+          compromisso ?? "",
+          emocao ?? "",
+          insight ?? "",
+
+          // novo 5D
+          fisico ?? "",
+          energetico ?? "",
+          emocional5d ?? "",
+          mental ?? "",
+          espiritual ?? "",
+        ],
+      ],
     },
   });
-
   res.status(201).json({ message: "Registro criado com sucesso" });
 }
 
@@ -53,7 +81,7 @@ export async function listMyRecords(req: Request, res: Response) {
 
   const response = await sheets.spreadsheets.values.get({
     spreadsheetId: SPREADSHEET_ID,
-    range: "Registros!A2:J",
+    range: "Registros!A2:O",
   });
 
   const rows = response.data.values || [];
@@ -63,15 +91,23 @@ export async function listMyRecords(req: Request, res: Response) {
     .map((row) => ({
       id: row[0],
       email: row[1],
-      data: row[2],
+      createdAt: row[2],
       modulo: row[3],
-      presenca: row[4],
-      energia: row[5],
-      clareza: row[6],
-      compromisso: row[7],
+
+      // antigo
+      presenca: row[4] ? Number(row[4]) : undefined,
+      energia: row[5] ? Number(row[5]) : undefined,
+      clareza: row[6] ? Number(row[6]) : undefined,
+      compromisso: row[7] ? Number(row[7]) : undefined,
       emocao: row[8],
       insight: row[9],
-    }));
 
+      // novo 5D
+      fisico: row[10] ? Number(row[10]) : undefined,
+      energetico: row[11] ? Number(row[11]) : undefined,
+      emocional5d5d: row[12] ? Number(row[12]) : undefined,
+      mental: row[13] ? Number(row[13]) : undefined,
+      espiritual: row[14] ? Number(row[14]) : undefined,
+    }));
   res.json(records);
 }
