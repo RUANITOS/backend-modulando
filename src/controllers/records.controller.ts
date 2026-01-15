@@ -20,56 +20,38 @@ export async function createRecord(req: Request, res: Response) {
 
   const email = (req as any).user.email;
 
-  const {
-    modulo,
+  const { emocao, insight, causas } = req.body;
 
-    // antigo
-    presenca,
-    energia,
-    clareza,
-    compromisso,
-
-    // novo 5D
-    fisico,
-    energetico,
-    emocional5d,
-    mental,
-    espiritual,
-
-    emocao,
-    insight,
-  } = req.body;
+  // validação mínima
+  if (!Array.isArray(causas)) {
+    return res.status(400).json({ error: "Formato de causas inválido" });
+  }
+  const causasSanitizadas = causas.map((c) => ({
+    causaId: c.causaId.trim(),
+    nota: c.nota,
+    subcausas: c.subcausas.map((s: string) => s.trim()),
+    textoLivre: c.textoLivre,
+  }));
 
   await sheets.spreadsheets.values.append({
     spreadsheetId: SPREADSHEET_ID,
-    range: "Registros!A:O",
+    range: "Registros!A:G",
     valueInputOption: "RAW",
     requestBody: {
       values: [
         [
-          uuid(),
-          email,
-          new Date().toISOString(),
-          modulo,
-
-          // antigo
-          presenca ?? "",
-          energia ?? "",
-          clareza ?? "",
-          compromisso ?? "",
+          uuid(), // RegistroId
+          email, // EmailUsuario
+          new Date().toISOString(), // Data
+          "modulo_atual", // ModuloId (ver nota abaixo)
           emocao ?? "",
           insight ?? "",
-
-          // novo 5D
-          fisico ?? "",
-          energetico ?? "",
-          emocional5d ?? "",
-          mental ?? "",
-          espiritual ?? "",
+          JSON.stringify(causasSanitizadas)
         ],
       ],
     },
   });
+
   res.status(201).json({ message: "Registro criado com sucesso" });
 }
 
@@ -81,7 +63,7 @@ export async function listMyRecords(req: Request, res: Response) {
 
   const response = await sheets.spreadsheets.values.get({
     spreadsheetId: SPREADSHEET_ID,
-    range: "Registros!A2:O",
+    range: "Registros!A2:G",
   });
 
   const rows = response.data.values || [];
@@ -92,22 +74,11 @@ export async function listMyRecords(req: Request, res: Response) {
       id: row[0],
       email: row[1],
       createdAt: row[2],
-      modulo: row[3],
-
-      // antigo
-      presenca: row[4] ? Number(row[4]) : undefined,
-      energia: row[5] ? Number(row[5]) : undefined,
-      clareza: row[6] ? Number(row[6]) : undefined,
-      compromisso: row[7] ? Number(row[7]) : undefined,
-      emocao: row[8],
-      insight: row[9],
-
-      // novo 5D
-      fisico: row[10] ? Number(row[10]) : undefined,
-      energetico: row[11] ? Number(row[11]) : undefined,
-      emocional5d5d: row[12] ? Number(row[12]) : undefined,
-      mental: row[13] ? Number(row[13]) : undefined,
-      espiritual: row[14] ? Number(row[14]) : undefined,
+      moduloId: row[3],
+      emocao: row[4],
+      insight: row[5],
+      causas: row[6] ? JSON.parse(row[6]) : [],
     }));
+
   res.json(records);
 }

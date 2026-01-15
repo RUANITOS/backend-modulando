@@ -7,7 +7,7 @@ dotenv.config(); // funciona local e ignora no Render
 import { sheets } from "./google/sheets";
 import authRoutes from "./routes/auth.routes";
 import recordRoutes from "./routes/records.routes";
-
+import moduleRoutes from "./routes/modules.routes";
 const app = express();
 
 app.use(cors());
@@ -15,6 +15,7 @@ app.use(express.json());
 
 app.use("/auth", authRoutes);
 app.use("/records", recordRoutes);
+app.use("/modules", moduleRoutes);
 
 app.get("/health", (_req: Request, res: Response) => {
   res.json({ status: "ok" });

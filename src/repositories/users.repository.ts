@@ -1,7 +1,7 @@
 import { sheets } from "../google/sheets";
 import { v4 as uuid } from "uuid";
 
-const RANGE = "Usuarios!A2:D";
+const RANGE = "Usuarios!A2:F";
 
 function getSpreadsheetId() {
   const id = process.env.SPREADSHEET_ID;
@@ -30,10 +30,17 @@ export async function findUserByEmail(email: string) {
     nome: row[1],
     email: row[2],
     dataEntrada: row[3],
+    cpf: row[4], // ✅ coluna E
+    dataNascimento: row[5], // ✅ coluna F
   };
 }
 
-export async function createUser(email: string, nome = "") {
+export async function createUser(
+  email: string,
+  nome = "",
+  cpf = "",
+  dataNascimento = ""
+) {
   const SPREADSHEET_ID = getSpreadsheetId();
 
   console.log("🧪 createUser chamado para:", email);
@@ -43,10 +50,10 @@ export async function createUser(email: string, nome = "") {
 
   await sheets.spreadsheets.values.append({
     spreadsheetId: SPREADSHEET_ID,
-    range: "Usuarios!A:D",
+    range: "Usuarios!A:F",
     valueInputOption: "RAW",
     requestBody: {
-      values: [[id, nome, email, dataEntrada]],
+      values: [[id, nome, email, dataEntrada, cpf, dataNascimento]],
     },
   });
 
@@ -57,5 +64,7 @@ export async function createUser(email: string, nome = "") {
     nome,
     email,
     dataEntrada,
+    cpf,
+    dataNascimento,
   };
 }

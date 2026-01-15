@@ -1,9 +1,6 @@
 import { Request, Response } from "express";
 import jwt from "jsonwebtoken";
-import {
-  findUserByEmail,
-  createUser,
-} from "../repositories/users.repository";
+import { findUserByEmail, createUser } from "../repositories/users.repository";
 
 const JWT_SECRET_ENV = process.env.JWT_SECRET;
 
@@ -13,18 +10,23 @@ if (!JWT_SECRET_ENV) {
 
 const JWT_SECRET: string = JWT_SECRET_ENV;
 
-
 export async function login(req: Request, res: Response) {
-  const { email } = req.body;
+  const { email, cpf, nome, dataNascimento } = req.body;
 
-  if (!email) {
-    return res.status(400).json({ error: "Email obrigatório" });
+  if (!email || !cpf) {
+    return res.status(400).json({ error: "Email e CPF são obrigatórios" });
   }
 
   let user = await findUserByEmail(email);
 
+  // 🆕 PRIMEIRO ACESSO → cria usuário
   if (!user) {
-    user = await createUser(email);
+    user = await createUser(email, nome ?? "", cpf, dataNascimento ?? "");
+  } else {
+    // 🔐 Usuário existe → valida CPF
+    if (user.cpf !== cpf) {
+      return res.status(401).json({ error: "CPF inválido" });
+    }
   }
 
   const token = jwt.sign(
@@ -36,8 +38,27 @@ export async function login(req: Request, res: Response) {
     { expiresIn: "7d" }
   );
 
-  res.json({
+  return res.json({
     token,
-    user,
+    user: {
+      id: user.id,
+      email: user.email,
+      nome: user.nome,
+    },
+  });
+}
+
+export async function checkEmail(req: Request, res: Response) {
+  const { email } = req.query;
+
+  if (!email || typeof email !== "string") {
+    return res.status(400).json({ error: "Email inválido" });
+  }
+
+  const user = await findUserByEmail(email);
+
+  return res.json({
+    exists: !!user,
+    nome: user?.nome ?? null,
   });
 }
