@@ -1,11 +1,14 @@
 import { Request, Response } from "express";
 import jwt from "jsonwebtoken";
-import { findUserByEmail, createUser } from "../repositories/users.repository";
+import {
+  findUserByEmail,
+  createUser,
+} from "../repositories/users.repository";
 
 const JWT_SECRET_ENV = process.env.JWT_SECRET;
 
 if (!JWT_SECRET_ENV) {
-  throw new Error("JWT_SECRET não definido no ambiente");
+  throw new Error("JWT_SECRET não definido");
 }
 
 const JWT_SECRET: string = JWT_SECRET_ENV;
@@ -19,19 +22,15 @@ export async function login(req: Request, res: Response) {
 
   let user = await findUserByEmail(email);
 
-  // 🆕 PRIMEIRO ACESSO → cria usuário
   if (!user) {
     user = await createUser(email, nome ?? "", cpf, dataNascimento ?? "");
-  } else {
-    // 🔐 Usuário existe → valida CPF
-    if (user.cpf !== cpf) {
-      return res.status(401).json({ error: "CPF inválido" });
-    }
+  } else if (user.cpf !== cpf) {
+    return res.status(401).json({ error: "CPF inválido" });
   }
 
   const token = jwt.sign(
     {
-      userId: user.id,
+      userId: user._id,
       email: user.email,
     },
     JWT_SECRET,
@@ -41,7 +40,7 @@ export async function login(req: Request, res: Response) {
   return res.json({
     token,
     user: {
-      id: user.id,
+      id: user._id,
       email: user.email,
       nome: user.nome,
     },

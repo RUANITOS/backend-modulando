@@ -2,12 +2,13 @@ import express, { Request, Response } from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 
-dotenv.config(); // funciona local e ignora no Render
+dotenv.config(); // funciona local e no Render
 
-import { sheets } from "./google/sheets";
 import authRoutes from "./routes/auth.routes";
 import recordRoutes from "./routes/records.routes";
 import moduleRoutes from "./routes/modules.routes";
+import { connectMongo } from "./database/mongo";
+
 const app = express();
 
 app.use(cors());
@@ -24,21 +25,18 @@ app.get("/health", (_req: Request, res: Response) => {
 // 🔥 PORTA OBRIGATÓRIA PARA O RENDER
 const PORT = process.env.PORT || 3000;
 
-// 🚀 SÓ DEPOIS DE ESCUTAR A PORTA
-app.listen(PORT, async () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-
-  // Teste do Sheets NÃO BLOQUEANTE
+async function bootstrap() {
   try {
-    const res = await sheets.spreadsheets.get({
-      spreadsheetId: process.env.SPREADSHEET_ID!,
-    });
+    // 🍃 Conecta no Mongo ANTES de subir o servidor
+    await connectMongo();
 
-    console.log(
-      "📄 Sheets conectado:",
-      res.data.properties?.title
-    );
+    app.listen(PORT, () => {
+      console.log(`🚀 Server running on port ${PORT}`);
+    });
   } catch (error) {
-    console.error("❌ Erro ao conectar no Sheets:", error);
+    console.error("❌ Erro ao iniciar o servidor:", error);
+    process.exit(1);
   }
-});
+}
+
+bootstrap();

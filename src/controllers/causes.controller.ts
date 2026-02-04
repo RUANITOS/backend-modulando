@@ -1,24 +1,12 @@
-import { Module } from "../models/Module";
+import { Request, Response } from "express";
 import { CauseModel } from "../models/CauseModel";
 import { CauseLean } from "../types/cause.types";
 
-export async function getModuloAtualConfig() {
-  const now = new Date();
-
-  const modulo = await Module.findOne({
-    dataInicio: { $lte: now },
-    dataFim: { $gte: now },
-  }).lean();
-
-  if (!modulo) return null;
-
+export async function getAllCauses(req: Request, res: Response) {
   const causes = (await CauseModel.find().lean()) as CauseLean[];
 
-  return {
-    id: modulo._id,
-    nome: modulo.nome,
-    descricao: modulo.descricao,
-    causas: causes.map((cause) => ({
+  res.json(
+    causes.map((cause) => ({
       id: cause._id,
       nome: cause.nome.trim(),
       descricao: cause.descricao,
@@ -27,6 +15,6 @@ export async function getModuloAtualConfig() {
         id: sub.causaId,
         nome: sub.nome,
       })),
-    })),
-  };
+    }))
+  );
 }

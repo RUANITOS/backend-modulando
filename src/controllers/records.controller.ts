@@ -1,84 +1,66 @@
 import { Request, Response } from "express";
-import { sheets } from "../google/sheets";
-import { v4 as uuid } from "uuid";
-
-function getSpreadsheetId(res?: Response) {
-  const id = process.env.SPREADSHEET_ID;
-
-  if (!id && res) {
-    res.status(500).json({
-      error: "SPREADSHEET_ID não definido no ambiente",
-    });
-  }
-
-  return id;
-}
-
+import { DailyRecord } from "../models/DailyRecord";
+import { Module } from "../models/Module";
+import { CauseModel } from "../models/CauseModel";
+import { getModuloAtualConfig } from "../services/modulesReader";
 export async function createRecord(req: Request, res: Response) {
-  const SPREADSHEET_ID = getSpreadsheetId(res);
-  if (!SPREADSHEET_ID) return;
-
-  const email = (req as any).user.email;
-
+  const user = (req as any).user;
   const { emocao, insight, causas } = req.body;
 
-  // validação mínima
   if (!Array.isArray(causas)) {
     return res.status(400).json({ error: "Formato de causas inválido" });
   }
-  const causasSanitizadas = causas.map((c) => ({
-    causaId: c.causaId.trim(),
-    nota: c.nota,
-    subcausas: c.subcausas.map((s: string) => s.trim()),
-    textoLivre: c.textoLivre,
-  }));
 
-  await sheets.spreadsheets.values.append({
-    spreadsheetId: SPREADSHEET_ID,
-    range: "Registros!A:G",
-    valueInputOption: "RAW",
-    requestBody: {
-      values: [
-        [
-          uuid(), // RegistroId
-          email, // EmailUsuario
-          new Date().toISOString(), // Data
-          "modulo_atual", // ModuloId (ver nota abaixo)
-          emocao ?? "",
-          insight ?? "",
-          JSON.stringify(causasSanitizadas)
-        ],
-      ],
-    },
+  const modulo = await getModuloAtualConfig();
+  if (!modulo) {
+    return res.status(400).json({ error: "Nenhum módulo ativo" });
+  }
+
+  await DailyRecord.create({
+    userId: user.userId,
+    moduleId: modulo.id,
+    emocao: emocao ?? "",
+    insight: insight ?? "",
+    causas,
   });
 
-  res.status(201).json({ message: "Registro criado com sucesso" });
+  return res.status(201).json({ message: "Registro criado com sucesso" });
 }
 
 export async function listMyRecords(req: Request, res: Response) {
-  const SPREADSHEET_ID = getSpreadsheetId(res);
-  if (!SPREADSHEET_ID) return;
+  const user = (req as any).user;
 
-  const email = (req as any).user.email;
+  const records = await DailyRecord.find({
+    userId: user.userId,
+  })
+    .sort({ createdAt: -1 })
+    .lean();
 
-  const response = await sheets.spreadsheets.values.get({
-    spreadsheetId: SPREADSHEET_ID,
-    range: "Registros!A2:G",
-  });
+  if (records.length === 0) {
+    return res.json([]);
+  }
 
-  const rows = response.data.values || [];
+  // 🔎 Carrega dados auxiliares uma única vez
+  const modules = await Module.find().lean();
+  const causes = await CauseModel.find().lean();
 
-  const records = rows
-    .filter((row) => row[1] === email)
-    .map((row) => ({
-      id: row[0],
-      email: row[1],
-      createdAt: row[2],
-      moduloId: row[3],
-      emocao: row[4],
-      insight: row[5],
-      causas: row[6] ? JSON.parse(row[6]) : [],
-    }));
+  const moduleMap = new Map(modules.map((m) => [String(m._id), m.nome]));
 
-  res.json(records);
+  const causeMap = new Map(causes.map((c) => [String(c._id), c.nome.trim()]));
+
+  return res.json(
+    records.map((r) => ({
+      registroId: r._id,
+      email: user.email,
+      data: r.createdAt, // 👈 o front usa `data`
+      moduloId: moduleMap.get(String(r.moduleId)) ?? r.moduleId,
+      emocao: r.emocao,
+      insight: r.insight,
+      causas: (r.causas ?? []).map((c: any) => ({
+        causaId: causeMap.get(String(c.causaId)) ?? c.causaId,
+        nota: c.nota,
+        subcausas: c.subcausas ?? [],
+      })),
+    })),
+  );
 }
