@@ -2,21 +2,12 @@
 import { User } from "../models/User";
 
 export async function findUserByEmail(email: string) {
-  return User.findOne({ email }).lean();
+  return User.findOne({ email }); // ❌ remove lean
 }
 
-export async function createUser(
-  email: string,
-  nome = "",
-  cpf = "",
-  dataNascimento = ""
-) {
-  const user = await User.create({
+export async function createUserByEmail(email: string) {
+  return User.create({
     email,
-    nome,
-    cpf,
-    dataNascimento,
+    firstAccessCompleted: false,
   });
-
-  return user.toObject();
 }

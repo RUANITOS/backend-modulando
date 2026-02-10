@@ -60,6 +60,7 @@ export async function listMyRecords(req: Request, res: Response) {
         causaId: causeMap.get(String(c.causaId)) ?? c.causaId,
         nota: c.nota,
         subcausas: c.subcausas ?? [],
+        textoLivre: c.textoLivre ?? null,
       })),
     })),
   );

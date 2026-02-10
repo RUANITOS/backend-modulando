@@ -17,7 +17,7 @@ const ModuleSchema = new Schema({
   dataInicio: Date,
   dataFim: Date,
   descricao: String,
-  causas: [CausaSchema],
+  causeIds: [{ type: Schema.Types.ObjectId, ref: "Cause" }],
 });
 
 export const Module = model("Module", ModuleSchema);
