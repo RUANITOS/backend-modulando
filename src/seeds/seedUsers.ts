@@ -23,6 +23,7 @@ async function seedUsers() {
     "sergiooliveira.so991593@gmail.com",
     "Wandavcaron@yahoo.com.br",
     "pedromoreiradiluz@gmail.com",
+    "bruna.russ@gmail.com",
   ];
 
   const results = {
